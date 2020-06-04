@@ -5,8 +5,15 @@ library(tidyr)
 setwd("F:/wild/PhD/ICON/Internship/RE__HEC-EFM_Results_for_FDA/")
 trends<-read.table("Trends_flow_RGSM.05112020.csv", sep="," ,header=T)
 
-#select only the response variables
+#select only the response variables in this order
+
 fish_response = trends %>% select(1,2,3,4,6,8,9,11,12)
+
+# chose this order so that the same appears in plots
+# Brood_y, Recruit_slop, geoslop, Oct index - row 1
+# Recruit_y, yoy_y and annual slop - row 2
+
+fish_response = trends %>% select(1,2,11,4,9,12,3,8,6)
 
 head(fish_response)
 summary(fish_response)
@@ -16,8 +23,10 @@ summary(fish_response)
 fish_response = fish_response %>% gather(key = variable, value = "value",-num,-year,factor_key = TRUE)
 fish_response$year = as.factor(fish_response$year)
 
+?facet_wrap
+
 fish_response_plot = ggplot(fish_response, aes(x = variable,y=value))+
-  geom_boxplot()+facet_wrap(variable~.,scales = "free")+
+  geom_boxplot(outlier.shape = NA)+facet_wrap(variable~.,scales = "free",nrow=2)+
   geom_jitter(aes(color = year),shape=16, position=position_jitter(0.2))+
   theme_bw()+ggtitle("Fish response")+
   theme(
@@ -40,7 +49,7 @@ flow_variables = flow_variables %>% gather(key = variable, value = "value",-num,
 flow_variables$year = as.factor(flow_variables$year)
 
 flow_variability = ggplot(flow_variables, aes(x = variable,y=value))+
-  geom_boxplot()+facet_wrap(variable~.,scales = "free")+
+  geom_boxplot(outlier.shape = NA)+facet_wrap(variable~.,scales = "free")+
   geom_jitter(aes(color = year),shape=16, position=position_jitter(0.2))+
   theme_bw()+ggtitle("Flow variability")+
   theme(
@@ -64,7 +73,7 @@ flow_variables = flow_variables %>% gather(key = variable, value = "value",-num,
 flow_variables$year = as.factor(flow_variables$year)
 
 flow_variability = ggplot(flow_variables, aes(x = variable,y=value))+
-  geom_boxplot()+facet_wrap(variable~.,scales = "free")+
+  geom_boxplot(outlier.shape = NA)+facet_wrap(variable~.,scales = "free")+
   geom_jitter(aes(color = year),shape=16, position=position_jitter(0.2))+
   theme_bw()+ggtitle("Flow variability")+
   theme(
