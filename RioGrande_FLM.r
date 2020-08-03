@@ -119,6 +119,14 @@ fRegressList = fRegress(Fish_logResponse$geoslope,templist_f,betalist)
 
 
 ############# Step 5: Interpret the functional predictor variable #################
+## The regression coefficients are stored in fRegressList$betaestlist
+
+betaestlist = fRegressList$betaestlist
+geoslopebetafd = betaestlist[[2]]$fd
+plot(geoslopebetafd, xlab="Day",
+     ylab="Beta for geoslope")
+
+
 
 
 
