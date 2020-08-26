@@ -29,9 +29,10 @@ Fish = read.csv("file:///F:/wild/PhD/ICON/Internship/19_6_2020_new_analysis/Tren
 
 # select the response variables: geoslope, YOY_Y, Recruit_slope and October CPUE
 names(Fish)
+plot(log(Fish$geoslope+1)~Fish$year)
 Fish = select(Fish,c("geoslope","YOY_y","recruit_slope","Oct_Index"))
-Fish_logResponse = log10(Fish)
-
+Fish_logResponse = log(Fish+1)
+geoslope = Fish_logResponse$geoslope
 
 ############################################
 
@@ -62,12 +63,6 @@ daybasis65 = create.fourier.basis(c(0,365),65)
 plot(daybasis65)
 
 
-# creating b-spline basis function 
-knots = seq(0,365,5) # knots placed every 5 days in the interval (0,365) according to Stewart-Koster et al.
-order = 4            # Using default value, an order of 4 results in cubic splines.
-nbasis = 4 + length(knots) - 2 #nbasis = order + number of interior knots (number of knots - 2)   #from Ramsay et al
-bbasis = create.bspline.basis(c(0,365),nbasis,order,knots) 
-plot(bbasis)
 
 ########### Step 2 : Create a functional data object using basis function and explanatory variable  #############
 # using fourier basis
@@ -85,21 +80,12 @@ plot(tempSmooth_f)
 #save the functional data object
 tempfd_f =tempSmooth_f$fd
 
-# using b-spline basis
-tempSmooth_b = smooth.basis(dayOfYear,Albu_flow[1:365,],bbasis)  
-plot(tempSmooth_b)
-#save the functional data object
-tempfd_b =tempSmooth_b$fd
 
 #store the functional data covariates in a list
 #fourier
 templist_f = vector("list",2)
 templist_f[[1]] = rep(1,16)
 templist_f[[2]] = tempfd_f
-#b-spline
-templist_b = vector("list",2)
-templist_b[[1]] = rep(1,16)
-templist_b[[2]] = tempfd_b
 
 
 ################## Step 3: Create a functional predictor or functional regression coefficient(Beta) #########
@@ -116,19 +102,54 @@ betalist[[2]] = betabasis
 # Scalar respone ~ fRegress (time series of explanatory variable)  + optional scalar explanatory variable
 
 # Using log(geoslope) as the response variable to begin with
-fRegressList = fRegress(Fish_logResponse$geoslope,templist_f,betalist)
+fRegressList = fRegress(geoslope,templist_f,betalist)
 
 
 ############# Step 5: Interpret the functional predictor variable #################
 ## The regression coefficients are stored in fRegressList$betaestlist
 
 betaestlist = fRegressList$betaestlist
+view(betaestlist)
 geoslopebetafd = betaestlist[[2]]$fd
 plot(geoslopebetafd, xlab="Day",
      ylab="Beta for geoslope")
 
+y.hat = fRegressList$yhatfdobj          # Extract the fitted values
+resid.y <- geoslope - y.hat                 # Residuals
+
+plot(geoslope~y.hat)
+
+# Develop approximate pointwise confidence intervals
+sigmae. <- sum(resid.y^2)/(length(geoslope)-fRegressList$df)   #    Using 2* SE of the reg coefficient at each time t
+sigmae <- sigmae.*diag(rep(1,length(geoslope)))
+y2cMap <- tempSmooth_f$y2cMap
+stderrList <- fRegress.stderr(fRegressList, y2cMap, sigmae)
+
+# Extract the functional  reg coef for plotting
+betafdpar <- betaestlist[[2]]
+betafd <- betafdpar$fd
+betastderrList <- stderrList$betastderrlist
+betastderrfd <- betastderrList[[2]]
 
 
+plot(geoslopebetafd, xlab="Day", ylab = "Flow reg coeff")
+lines(betafd+2*betastderrfd)
+lines(betafd-2*betastderrfd)
+
+
+#Assess the quality of this fit
+geoslopehat1 = fRegressList$yhatfdobj
+geosloperes1 = Fish_logResponse$geoslope - geoslopehat1
+(SSE1.1 = sum(geosloperes1^2))
+(SSE0 = sum((Fish_logResponse$geoslope - mean(Fish_logResponse$geoslope))^2))
+
+
+(RSQ1 = (SSE0-SSE1.1)/SSE0)
+Fratio1 = ((SSE0-SSE1)/5)/(SSE1/29)
+
+
+
+fRegressList$df
 
 
 
