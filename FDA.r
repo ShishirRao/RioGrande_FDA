@@ -86,8 +86,6 @@ RSQ1 = (SSE0-SSE1.1)/SSE0
 Fratio1 = ((SSE0-SSE1.1)/(fRegressList$df-1))/(SSE1.1/(length(annualprec)-fRegressList$df))
 
 
-
-
 ############Using a smoothing parameter########
 Lcoef = c(0,(2*pi/365)^2,0)
 plot(Lcoef)
@@ -96,7 +94,7 @@ plot(Lcoef)
 harmaccelLfd = vec2Lfd(Lcoef, c(0,365))
 plot(harmaccelLfd[[1]])
 
-# defining the ?? estimate by a functional parameter object that
+# defining the beta estimate by a functional parameter object that
 # incorporates both this roughness penalty and a level of
 # smoothing
 betabasis = create.fourier.basis(c(0, 365), 35)
@@ -126,6 +124,66 @@ SSE1.2 = sum((annualprec-annualprechat2)^2)
 print(c(RSQ1,Fratio1))
 print(c(RSQ2,Fratio2))
 
+#Confidence intervals
+resid = annualprec - annPrecTemp$yhatfdobj
+SigmaE.= sum(resid^2)/(35-annPrecTemp$df)
+SigmaE = SigmaE. *diag(rep(1,35))
+y2cMap = tempSmooth$y2cMap
+stderrList = fRegress.stderr(annPrecTemp, y2cMap,
+                             SigmaE)
+
+
+betafdPar = annPrecTemp$betaestlist[[2]]
+betafd = betafdPar$fd
+betastderrList = stderrList$betastderrlist
+betastderrfd = betastderrList[[2]]
+plot(betafd, xlab="Day",
+     ylab="Temperature Reg. Coeff.",
+     ylim=c(-6e-4,1.2e-03), lwd=2)
+lines(betafd+2*betastderrfd, lty=2, lwd=1)
+lines(betafd-2*betastderrfd, lty=2, lwd=1)
+
+
+###### are these models any better than a constant value of Beta ##########
+
+betalist[[2]] = fdPar(conbasis)
+fRegressList = fRegress(annualprec, templist,
+                        betalist)
+betaestlist = fRegressList$betaestlist
+
+annualprechat = fRegressList$yhatfdobj
+SSE1 = sum((annualprec-annualprechat)^2)
+RSQ = (SSE0 - SSE1)/SSE0
+Fratio = ((SSE0-SSE1)/1)/(SSE1/33)
+
+print(c(RSQ1,Fratio1))
+print(c(RSQ2,Fratio2))
+print(c(RSQ,Fratio))
+
+
+#chosing a smoothing parameter
+# initialise smoothing parameters
+betabasis = create.fourier.basis(c(0, 365), 35)
+lambda = 10^12.5
+betafdPar = fdPar(betabasis, harmaccelLfd, lambda)
+betalist[[2]] = betafdPar
+
+
+loglam = seq(5,15,0.5)
+nlam = length(loglam)
+SSE.CV = matrix(0,nlam,1)
+for (ilam in 1:nlam) {
+  lambda = 10^loglam[ilam]
+  betalisti = betalist
+  betafdPar2 = betalisti[[2]]
+  betafdPar2$lambda = lambda
+  betalisti[[2]] = betafdPar2
+  fRegi = fRegress.CV(annualprec, templist,
+                      betalisti)
+  SSE.CV[ilam] = fRegi$SSE.CV
+}
+
+plot(SSE.CV~loglam)
 
 
 ######### understanding the functional object creation #########
