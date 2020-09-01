@@ -1,10 +1,11 @@
 library(stringr)
+library(ggplot2)
 
 ############## FLM_Fourier_create ####################
 
 
 ######################################################
-FLM_Fourier_create<- function(y,name){
+FLM_Fourier_create<- function(y,name,ylimit){
 
   daybasis65 = create.fourier.basis(c(0,365),65)
   
@@ -34,8 +35,8 @@ FLM_Fourier_create<- function(y,name){
   #plot(tempbetafd, xlab="Day",
   #     ylab="Beta for geoslope")
   
-  y.hat1 = fRegressList$yhatfdobj          # Extract the fitted values
-  resid.y1 <- geoslope - y.hat1                 # Residuals
+  y.hat1 = fRegressList$yhatfdobj       # Extract the fitted values
+  resid.y1 <- y - y.hat1                # Residuals
   
   
   #calcualate squared multiple correlation and F ratio 
@@ -64,28 +65,25 @@ FLM_Fourier_create<- function(y,name){
   minfd = betafd-2*betastderrfd
   
   plot(betafd, xlab="Day",
-       ylab="Flow Reg. Coeff.",ylim=c(-15e-6,15e-6),
-       lwd=2)
-  title(main = name)
-  title(sub = paste("RSQ = ",round(RSQ1,3),"\n",
+       ylab="Flow Reg. Coeff.",ylim=c(-ylimit,ylimit),
+       lwd=2,cex.lab=1.5, cex.axis=3, cex.main=1.5, cex.sub=1.5)
+  
+  title(main = name,cex.lab=1.5, cex.axis=3, cex.main=1.5, cex.sub=1.5)
+  title(sub = paste("RSQ = ",round(RSQ1,3),",",
                     "Fratio = ",round(Fratio1,3),"\n",
-                    "P-value = ",F.res$pval,"\n"),
-                    line = -0.5,cex.sub = 0.8)
+                    "P-value = ",round(F.res$pval,3),",",
+                    "df =", round(fRegressList$df,1)),
+                    line = -0.9,cex.lab=1.5, cex.axis=3, cex.main=1.5, cex.sub=1.5)
   #legend("topleft",paste("RSQ = ",round(RSQ1,3),"\n","Fratio = ",round(Fratio1,3)),"\n",
   #        "P-value = ",F.res$pval)
   lines(betafd+2*betastderrfd,lwd=1,lty=2)
   lines(betafd-2*betastderrfd,lwd=1,lty=2)
+  
 }
 
-############## FLM_Fourier_create_smoothing ####################
 
-
-################################################################
-
-
-
-
-FLM_Fourier_create_smoothing<- function(y,name,lambda_input){
+#########################FLM_Fourier_create_smoothing############
+FLM_Fourier_create_smoothing<- function(y,name,lambda_input,ylimit){
   
   daybasis65 = create.fourier.basis(c(0,365),65)
   
@@ -120,7 +118,7 @@ FLM_Fourier_create_smoothing<- function(y,name,lambda_input){
   tempbetafd = betaestlist[[2]]$fd
   
   y.hat1 = fRegressList$yhatfdobj          # Extract the fitted values
-  resid.y1 <- geoslope - y.hat1                 # Residuals
+  resid.y1 <- y - y.hat1                 # Residuals
   
   #calcualate squared multiple correlation and F ratio 
   SSE1.1 = sum(resid.y1^2)
@@ -148,33 +146,58 @@ FLM_Fourier_create_smoothing<- function(y,name,lambda_input){
   minfd = betafd-2*betastderrfd
   
   plot(betafd, xlab="Day",
-       ylab="Flow Reg. Coeff.",ylim=c(-15e-6,15e-6),
+       ylab="Flow Reg. Coeff.",ylim=c(-ylimit,ylimit),
        lwd=2)
   title(main = name)
   subtitle = paste("RSQ = ",round(RSQ1,3),",",
-                    "Fratio = ",round(Fratio1,3),"\n",
-                    "P-value = ",F.res$pval,",",
-                    "lambda = ",lambda_input)
-  mtext(side=1, line=-1, at=10, adj=0, cex=0.5, subtitle)
+                    "Fratio = ",round(Fratio1,3),",",
+                    "P-value = ",round(F.res$pval,3),"\n",
+                    "df =", round(fRegressList$df,1),",",
+                    "CV =",round(fRegressList$OCV,3))
+  
+  mtext(side=1, line=-1, at=10, adj=0, cex=0.6, subtitle)
   #legend("topleft",paste("RSQ = ",round(RSQ1,3),"\n","Fratio = ",round(Fratio1,3)),"\n",
   #        "P-value = ",F.res$pval)
   lines(betafd+2*betastderrfd,lwd=1,lty=2)
   lines(betafd-2*betastderrfd,lwd=1,lty=2)
 }
 
-?mtext
+###################################################
 
 
-FLM_Fourier_create(Fish_logResponse$geoslope,"Geoslope")
+FLM_Fourier_create(Fish$geoslope,"Geoslope", 15e-6)
+FLM_Fourier_create(log(Fish$geoslope+1),"Log(Geoslope+1)", 15e-6)
+FLM_Fourier_create(log10(Fish$geoslope+1),"Log10(Geoslope+1)", 15e-6)
 
 par(mfrow=c(3,3))
 for(lambda in 10:16){
-  FLM_Fourier_create_smoothing(Fish_logResponse$geoslope,"Geoslope",lambda)
+  FLM_Fourier_create_smoothing(log(Fish$geoslope+1),
+                               paste("log(Geoslope+1) with lambda = ",lambda),
+                               lambda,15e-6)
 }
 
 
-FLM_Fourier_create(Fish_logResponse$YOY_y,"YOY")
+plot(log(Fish$geoslope+1)~log(Fish$YOY_y+1))
+par(mfrow=c(1,1))
+FLM_Fourier_create(log(Fish$YOY_y+1),"Log(YOY+1)",70e-6)
+par(mfrow=c(3,3))
+for(lambda in 10:16){
+  FLM_Fourier_create_smoothing(log(Fish$YOY_y+1),
+                               paste("log(YOY_y+1) with lambda = ",lambda),
+                               lambda,70e-6)
+}
 
 
-FLM_Fourier_create(Fish_logResponse$recruit_slope,"Recruitment Slope")
-FLM_Fourier_create(Fish_logResponse$Oct_Index,"October Index")
+
+plot(log(Fish$geoslope+1)~log(Fish$recruit_slope+1))
+FLM_Fourier_create(log(Fish$recruit_slope+1),"Log(Recruitment Slope+1)",1e-6)
+
+plot(log(Fish$geoslope+1)~log(Fish$Oct_Index+1))
+FLM_Fourier_create(log(Fish$Oct_Index+1),"Log(Oct Index+1)",50e-6)
+
+
+par(mfrow=c(2,2))
+FLM_Fourier_create(log(Fish$geoslope+1),"Log(Geoslope+1)", 15e-6)
+FLM_Fourier_create(log(Fish$YOY_y+1),"Log(YOY+1)",70e-6)
+FLM_Fourier_create(log(Fish$recruit_slope+1),"Log(Recruitment Slope+1)",1e-6)
+FLM_Fourier_create(log(Fish$Oct_Index+1),"Log(Oct Index+1)",50e-6)

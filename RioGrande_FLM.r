@@ -29,10 +29,11 @@ Fish = read.csv("file:///F:/wild/PhD/ICON/Internship/19_6_2020_new_analysis/Tren
 
 # select the response variables: geoslope, YOY_Y, Recruit_slope and October CPUE
 names(Fish)
-plot(log(Fish$geoslope+1)~Fish$year)
 Fish = select(Fish,c("geoslope","YOY_y","recruit_slope","Oct_Index"))
 Fish_logResponse = log(Fish+1)
-geoslope = Fish_logResponse$geoslope
+y = Fish_logResponse$geoslope
+
+
 
 ############################################
 
@@ -62,20 +63,20 @@ geoslope = Fish_logResponse$geoslope
 daybasis65 = create.fourier.basis(c(0,365),65)
 plot(daybasis65)
 
-
+?log
 
 ########### Step 2 : Create a functional data object using basis function and explanatory variable  #############
 # using fourier basis
 
 # check for year 2002 to see the fit
-tempSmooth_f=smooth.basis(dayOfYear,Albu_flow[1:365],daybasis65) #dayOfYear = c(1,365)
-plot(tempSmooth_f)
-summary(tempSmooth_f)
+#tempSmooth_f=smooth.basis(dayOfYear,log(Albu_flow[1:365]+1),daybasis65) #dayOfYear = c(1,365)
+#plot(tempSmooth_f)
+#summary(tempSmooth_f)
 # add actual discharge values on the plot of functional data object
-points(Albu_flow[1:365])
+#plot(log(Albu_flow[1:365]+1)
 
 # do it for all the 16 years
-tempSmooth_f=smooth.basis(dayOfYear,Albu_flow,daybasis65)
+tempSmooth_f=smooth.basis(day.5,Albu_flow,daybasis65)
 plot(tempSmooth_f)
 #save the functional data object
 tempfd_f =tempSmooth_f$fd
@@ -96,61 +97,167 @@ betalist = vector("list",2)
 betalist[[1]] = conbasis
 betalist[[2]] = betabasis
 
-# not sure how to do the b-spline version of beta yet. TBD
 
 ######## Step 4 : Select the appropriate response variable and perform regression of the form ############
 # Scalar respone ~ fRegress (time series of explanatory variable)  + optional scalar explanatory variable
 
 # Using log(geoslope) as the response variable to begin with
-fRegressList = fRegress(geoslope,templist_f,betalist)
+fRegressList1 = fRegress(y,templist_f,betalist)
 
 
 ############# Step 5: Interpret the functional predictor variable #################
 ## The regression coefficients are stored in fRegressList$betaestlist
 
-betaestlist = fRegressList$betaestlist
-view(betaestlist)
-geoslopebetafd = betaestlist[[2]]$fd
-plot(geoslopebetafd, xlab="Day",
+par(mfrow=c(1,1))
+
+betaestlist1 = fRegressList1$betaestlist
+tempbetafd1 = betaestlist1[[2]]$fd
+plot(tempbetafd1, xlab="Day",
      ylab="Beta for geoslope")
 
-y.hat = fRegressList$yhatfdobj          # Extract the fitted values
-resid.y <- geoslope - y.hat                 # Residuals
+y.hat1 = fRegressList1$yhatfdobj          # Extract the fitted values
+resid.y1 <- y - y.hat1                 # Residuals
 
-plot(geoslope~y.hat)
+F.res = Fperm.fd(y, templist_f,betalist, plotres=F)
 
-# Develop approximate pointwise confidence intervals
-sigmae. <- sum(resid.y^2)/(length(geoslope)-fRegressList$df)   #    Using 2* SE of the reg coefficient at each time t
-sigmae <- sigmae.*diag(rep(1,length(geoslope)))
-y2cMap <- tempSmooth_f$y2cMap
-stderrList <- fRegress.stderr(fRegressList, y2cMap, sigmae)
+# plot y vs. fitted y
+plot(y~y.hat1,xlab="Fitted values",ylab="Observed geoslope",main="Geoslope fit")
+abline(0,1)
+plot(resid.y1 ~ y,xlab = "Fitted values",ylab = "Residuals",main = "Geoslope: Residual plot")
 
-# Extract the functional  reg coef for plotting
-betafdpar <- betaestlist[[2]]
-betafd <- betafdpar$fd
-betastderrList <- stderrList$betastderrlist
-betastderrfd <- betastderrList[[2]]
+#calcualate squared multiple correlation and F ratio 
+SSE1.1 = sum(resid.y1^2)
+SSE0 = sum((y - mean(y))^2)
 
+RSQ1 = (SSE0-SSE1.1)/SSE0
+Fratio1 = ((SSE0-SSE1.1)/(fRegressList1$df-1))/(SSE1.1/(length(y)-fRegressList1$df))
 
-plot(geoslopebetafd, xlab="Day", ylab = "Flow reg coeff")
-lines(betafd+2*betastderrfd)
-lines(betafd-2*betastderrfd)
-
-
-#Assess the quality of this fit
-geoslopehat1 = fRegressList$yhatfdobj
-geosloperes1 = Fish_logResponse$geoslope - geoslopehat1
-(SSE1.1 = sum(geosloperes1^2))
-(SSE0 = sum((Fish_logResponse$geoslope - mean(Fish_logResponse$geoslope))^2))
+#Confidence intervals
+resid = y - fRegressList1$yhatfdobj
+SigmaE. = sum(resid^2)/(length(y)-fRegressList1$df)
+SigmaE = SigmaE. *diag(rep(1,length(y)))
+y2cMap = tempSmooth_f$y2cMap
+stderrList = fRegress.stderr(fRegressList1, y2cMap,SigmaE)
 
 
-(RSQ1 = (SSE0-SSE1.1)/SSE0)
-Fratio1 = ((SSE0-SSE1)/5)/(SSE1/29)
+betafdPar = fRegressList1$betaestlist[[2]]
+betafd = betafdPar$fd
+betastderrList = stderrList$betastderrlist
+betastderrfd = betastderrList[[2]]
+
+maxfd = betafd+2*betastderrfd
+minfd = betafd-2*betastderrfd
 
 
+plot.fd(betafd, xlab="Day", ylab="Flow Reg. Coeff.",cex.axis=3,
+     ylim = c(-15e-6,15e-6),
+     lwd=2,cex.lab=5, cex.main=1, cex.sub=1.5)
 
-fRegressList$df
+lines(betafd+2*betastderrfd,lwd=1,lty=2)
+lines(betafd-2*betastderrfd,lwd=1,lty=2)
+
+title(main = name)
+title(sub = paste("RSQ = ",round(RSQ1,3),"\n",
+                  "Fratio = ",round(Fratio1,3),"\n",
+                  "P-value = ",F.res$pval,"\n"),
+      line = -0.5,cex.sub = 0.8)
+subtitle = paste("RSQ = ",round(RSQ1,3),"\n",
+                 "Fratio = ",round(Fratio1,3),"\n",
+                 "P-value = ",F.res$pval,"\n")
 
 
+fRegressList1$df
+fRegressList1$gcv
 
+
+plot(seq(1,10,1)~seq(2,20,2), xlab = "x",ylab="y",main="x ~ y",
+     cex.axis = 2)
+
+############Using a smoothing parameter########
+Lcoef = c(0,(2*pi/365)^2,0)
+plot(Lcoef)
+
+# Harmonic accelerator
+harmaccelLfd = vec2Lfd(Lcoef, c(0,365))
+
+accelLfd <- int2Lfd(2)
+# defining the beta estimate by a functional parameter object that
+# incorporates both this roughness penalty and a level of
+# smoothing
+betabasis = create.fourier.basis(c(0, 365), 65)
+lambda = 10^12
+betafdPar = fdPar(betabasis, accelLfd, lambda)
+betalist[[2]] = betafdPar
+
+# regression using lambda and harmonic accelerator
+fRegressList2 = fRegress(y, templist_f,betalist)
+betaestlist2 = fRegressList2$betaestlist
+tempbetafd2 = betaestlist2[[2]]$fd
+plot(tempbetafd2, xlab="Day",
+     ylab="Beta for geoslope")
+
+y.hat2 = fRegressList2$yhatfdobj          # Extract the fitted values
+resid.y2 <- y - y.hat2               # Residuals
+
+# plot y vs. fitted y
+plot(y~y.hat1)
+points(y~y.hat2, col = "Red")
+plot(resid.y1 ~ y)
+points(resid.y2~y, col = "red")
+
+#calcualate squared multiple correlation and F ratio 
+SSE1.2 = sum(resid.y2^2)
+SSE0 = sum((y - mean(y))^2)
+
+RSQ2 = (SSE0-SSE1.2)/SSE0
+Fratio2 = ((SSE0-SSE1.2)/(fRegressList2$df-1))/(SSE1.1/(length(y)-fRegressList2$df))
+
+fRegressList2$df
+fRegressList2$gcv
+fRegressList2$OCV
+
+#chosing lambda using CV approach
+loglam = seq(10,15,0.5)
+nlam = length(loglam)
+SSE.CV = matrix(0,nlam,1)
+SSE.GCV = matrix(0,nlam,1)
+SSE.OCV = matrix(0,nlam,1)
+for (ilam in 1:nlam) {
+  lambda = 10^loglam[ilam]
+  betalisti = betalist
+  betafdPar2 = betalisti[[2]]
+  betafdPar2$lambda = lambda
+  betalisti[[2]] = betafdPar2
+  fRegi = fRegress.CV(y, templist_f,betalisti)
+  fRegi2 = fRegress(y, templist_f,betalisti)
+  SSE.CV[ilam] = fRegi$SSE.CV
+  SSE.GCV[ilam] = fRegi2$gcv
+  SSE.OCV[ilam] = fRegi2$OCV
+}
+
+plot(SSE.CV~loglam)
+plot(SSE.GCV~loglam)
+plot(SSE.OCV~loglam)
+
+?fRegress.CV
+
+#Confidence intervals
+resid = y - fRegressList2$yhatfdobj
+plot(resid~y)
+SigmaE. = sum(resid^2)/(length(y)-fRegressList2$df)
+SigmaE = SigmaE. *diag(rep(1,length(y)))
+y2cMap = tempSmooth_f$y2cMap
+stderrList = fRegress.stderr(fRegressList2, y2cMap,SigmaE)
+
+
+betafdPar = fRegressList2$betaestlist[[2]]
+betafd = betafdPar$fd
+betastderrList = stderrList$betastderrlist
+betastderrfd = betastderrList[[2]]
+plot(betafd, xlab="Day",title = "Geoslope",
+     ylab="Flow Reg. Coeff.",ylim=c(-8e-6,10e-06),
+     lwd=2)
+
+lines(betafd+2*betastderrfd,lwd=1,lty=2)
+lines(betafd-2*betastderrfd,lwd=1,lty=2)
 

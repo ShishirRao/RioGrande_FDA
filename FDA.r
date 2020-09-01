@@ -252,6 +252,7 @@ sigerr = 0.2
 y = x + rnorm(x)*sigerr
 lines(y~argvals)
 
+
 #  When we ran this code, we got these values of y (rounded to two
 #  decimals):
 y = c(0.27,  0.05,  0.58,  0.91,  1.07,  0.98,  0.54,  0.94,  1.13,  0.64,
