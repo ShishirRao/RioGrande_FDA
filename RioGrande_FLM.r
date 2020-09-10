@@ -33,8 +33,6 @@ Fish = select(Fish,c("geoslope","YOY_y","recruit_slope","Oct_Index"))
 Fish_logResponse = log(Fish+1)
 y = Fish_logResponse$geoslope
 
-
-
 ############################################
 
 ######### Functional linear model implementation ##############
@@ -62,8 +60,6 @@ y = Fish_logResponse$geoslope
 # Also, the canadian weather example from Ramsay et al., uses 65 basis function for precip data 
 daybasis65 = create.fourier.basis(c(0,365),65)
 plot(daybasis65)
-
-?log
 
 ########### Step 2 : Create a functional data object using basis function and explanatory variable  #############
 # using fourier basis
@@ -107,9 +103,6 @@ fRegressList1 = fRegress(y,templist_f,betalist)
 
 ############# Step 5: Interpret the functional predictor variable #################
 ## The regression coefficients are stored in fRegressList$betaestlist
-
-par(mfrow=c(1,1))
-
 betaestlist1 = fRegressList1$betaestlist
 tempbetafd1 = betaestlist1[[2]]$fd
 plot(tempbetafd1, xlab="Day",
@@ -118,6 +111,7 @@ plot(tempbetafd1, xlab="Day",
 y.hat1 = fRegressList1$yhatfdobj          # Extract the fitted values
 resid.y1 <- y - y.hat1                 # Residuals
 
+# permutation based approach to calculate p-value. See Ramsay et al. for details
 F.res = Fperm.fd(y, templist_f,betalist, plotres=F)
 
 # plot y vs. fitted y
@@ -128,17 +122,15 @@ plot(resid.y1 ~ y,xlab = "Fitted values",ylab = "Residuals",main = "Geoslope: Re
 #calcualate squared multiple correlation and F ratio 
 SSE1.1 = sum(resid.y1^2)
 SSE0 = sum((y - mean(y))^2)
-
 RSQ1 = (SSE0-SSE1.1)/SSE0
 Fratio1 = ((SSE0-SSE1.1)/(fRegressList1$df-1))/(SSE1.1/(length(y)-fRegressList1$df))
 
-#Confidence intervals
+#Confidence intervals based on Ramsay et. al 2009
 resid = y - fRegressList1$yhatfdobj
 SigmaE. = sum(resid^2)/(length(y)-fRegressList1$df)
 SigmaE = SigmaE. *diag(rep(1,length(y)))
 y2cMap = tempSmooth_f$y2cMap
 stderrList = fRegress.stderr(fRegressList1, y2cMap,SigmaE)
-
 
 betafdPar = fRegressList1$betaestlist[[2]]
 betafd = betafdPar$fd
@@ -148,7 +140,7 @@ betastderrfd = betastderrList[[2]]
 maxfd = betafd+2*betastderrfd
 minfd = betafd-2*betastderrfd
 
-
+#plot regression coefficient
 plot.fd(betafd, xlab="Day", ylab="Flow Reg. Coeff.",cex.axis=3,
      ylim = c(-15e-6,15e-6),
      lwd=2,cex.lab=5, cex.main=1, cex.sub=1.5)
@@ -161,17 +153,11 @@ title(sub = paste("RSQ = ",round(RSQ1,3),"\n",
                   "Fratio = ",round(Fratio1,3),"\n",
                   "P-value = ",F.res$pval,"\n"),
       line = -0.5,cex.sub = 0.8)
+
 subtitle = paste("RSQ = ",round(RSQ1,3),"\n",
                  "Fratio = ",round(Fratio1,3),"\n",
                  "P-value = ",F.res$pval,"\n")
 
-
-fRegressList1$df
-fRegressList1$gcv
-
-
-plot(seq(1,10,1)~seq(2,20,2), xlab = "x",ylab="y",main="x ~ y",
-     cex.axis = 2)
 
 ############Using a smoothing parameter########
 Lcoef = c(0,(2*pi/365)^2,0)
@@ -212,10 +198,6 @@ SSE0 = sum((y - mean(y))^2)
 RSQ2 = (SSE0-SSE1.2)/SSE0
 Fratio2 = ((SSE0-SSE1.2)/(fRegressList2$df-1))/(SSE1.1/(length(y)-fRegressList2$df))
 
-fRegressList2$df
-fRegressList2$gcv
-fRegressList2$OCV
-
 #chosing lambda using CV approach
 loglam = seq(10,15,0.5)
 nlam = length(loglam)
@@ -235,29 +217,6 @@ for (ilam in 1:nlam) {
   SSE.OCV[ilam] = fRegi2$OCV
 }
 
-plot(SSE.CV~loglam)
-plot(SSE.GCV~loglam)
-plot(SSE.OCV~loglam)
-
-?fRegress.CV
-
-#Confidence intervals
-resid = y - fRegressList2$yhatfdobj
-plot(resid~y)
-SigmaE. = sum(resid^2)/(length(y)-fRegressList2$df)
-SigmaE = SigmaE. *diag(rep(1,length(y)))
-y2cMap = tempSmooth_f$y2cMap
-stderrList = fRegress.stderr(fRegressList2, y2cMap,SigmaE)
-
-
-betafdPar = fRegressList2$betaestlist[[2]]
-betafd = betafdPar$fd
-betastderrList = stderrList$betastderrlist
-betastderrfd = betastderrList[[2]]
-plot(betafd, xlab="Day",title = "Geoslope",
-     ylab="Flow Reg. Coeff.",ylim=c(-8e-6,10e-06),
-     lwd=2)
-
-lines(betafd+2*betastderrfd,lwd=1,lty=2)
-lines(betafd-2*betastderrfd,lwd=1,lty=2)
+plot(SSE.CV~loglam, xlab = "Log(lambda)", ylab = "Crossvalidation score", 
+     main = "Smoothing and penalty estimation for Geoslope")
 
