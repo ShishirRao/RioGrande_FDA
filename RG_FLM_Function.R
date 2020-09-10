@@ -1,7 +1,6 @@
 library(stringr)
 library(ggplot2)
-
-############## FLM_Fourier_create ####################
+library(ggplot2)
 
 
 ######################################################
@@ -163,6 +162,12 @@ FLM_Fourier_create_smoothing<- function(y,name,lambda_input,ylimit){
 }
 
 ###################################################
+par(mfrow=c(2,2))
+
+FLM_Fourier_create(log(Fish$geoslope+1),"Log(Geoslope+1)", 15e-6)
+FLM_Fourier_create(log(Fish$YOY_y+1),"Log(YOY+1)",70e-6)
+FLM_Fourier_create(log(Fish$recruit_slope+1),"Log(Recruitment Slope+1)",1e-6)
+FLM_Fourier_create(log(Fish$Oct_Index+1),"Log(Oct Index+1)",50e-6)
 
 
 FLM_Fourier_create(Fish$geoslope,"Geoslope", 15e-6)
@@ -196,8 +201,3 @@ plot(log(Fish$geoslope+1)~log(Fish$Oct_Index+1))
 FLM_Fourier_create(log(Fish$Oct_Index+1),"Log(Oct Index+1)",50e-6)
 
 
-par(mfrow=c(2,2))
-FLM_Fourier_create(log(Fish$geoslope+1),"Log(Geoslope+1)", 15e-6)
-FLM_Fourier_create(log(Fish$YOY_y+1),"Log(YOY+1)",70e-6)
-FLM_Fourier_create(log(Fish$recruit_slope+1),"Log(Recruitment Slope+1)",1e-6)
-FLM_Fourier_create(log(Fish$Oct_Index+1),"Log(Oct Index+1)",50e-6)
