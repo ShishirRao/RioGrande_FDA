@@ -1,0 +1,1 @@
+# RioGrande_FLM contains code and step by step instructions to build the FLM model. The first part uses a reduced dimension beta, and the second part uses a smoothing and penalty based approach. The RioGrande_FLM_Function takes the FLM code and builds a function. The function calls at the bottom of this page generates the plots used in the final report
